@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padam Paathu Paatu 🎵 (Dark Mode)</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        /* ========================================
+        1. GLOBAL STYLES & VARIABLES
+        ========================================
+        */
+        :root {
+            --primary-color: #FF6700; /* Cosmic Orange */
+            --secondary-color: #FF9500; /* Lighter Orange */
+            --background-color: #121212; /* Deep Black */
+            --surface-color: #1E1E1E; /* Dark Surface */
+            --text-color: #E0E0E0; /* Light Text */
+            --light-text-color: #FFFFFF;
+            --border-color: #333333; /* Dark Border */
+            --shadow: 0 4px 12px rgba(255, 103, 0, 0.1);
+            --shadow-strong: 0 6px 20px rgba(255, 103, 0, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            height: 90vh;
+            max-height: 800px;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-strong);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ========================================
+        2. SCREEN MANAGEMENT
+        ========================================
+        */
+        .screen {
+            display: none; /* Hidden by default */
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .screen.active {
+            display: flex; /* Shown by JS */
+        }
+
+        /* ========================================
+        3. UTILITY STYLES
+        ========================================
+        */
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--light-text-color);
+            box-shadow: 0 4px 10px rgba(255, 103, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(255, 103, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: var(--surface-color);
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #2a2a2a;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background-color: #555;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            border: none;
+        }
+
+        input[type="text"] {
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
+            transition: border-color 0.3s ease;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        input[type="text"]::placeholder {
+            color: #777;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 103, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: #aaa;
+            margin-bottom: 2rem;
+        }
+
+        /* ========================================
+        4. SCREEN: HOME (#screen-home)
+        ========================================
+        */
+        #screen-home {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #screen-home .logo {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        #screen-home .home-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        #screen-home .join-room-form {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* ========================================
+        5. SCREEN: LOBBY (#screen-lobby)
+        ========================================
+        */
+        #screen-lobby {
+            justify-content: space-between;
+            padding: 2rem;
+        }
+
+        #screen-lobby .lobby-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        #screen-lobby .lobby-header h2 {
+            margin-bottom: 0;
+        }
+
+        #screen-lobby .room-code-display {
+            background-color: #2a2a2a;
+            border: 2px dashed var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        #screen-lobby .room-code-display label {
+            font-size: 0.9rem;
+            color: #aaa;
+            display: block;
+        }
+
+        #screen-lobby .room-code-display span {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            letter-spacing: 2px;
+        }
+
+        #screen-lobby .player-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            width: 100%;
+            padding: 2rem 0;
+            flex-grow: 1;
+        }
+
+        .player-slot {
+            background-color: var(--background-color);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            transition: all 0.3s ease;
+        }
+
+        .player-slot.filled {
+            background-color: var(--surface-color);
+            border-style: solid;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        .player-slot .player-avatar {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .player-slot .player-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .player-slot .waiting-text {
+            font-style: italic;
+            color: #777;
+        }
+        
+        .player-slot .host-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            background-color: #2a2a2a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
+        #screen-lobby .lobby-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding-top: 1rem;
+            border-top: 2px solid var(--border-color);
+        }
+
+        /* ========================================
+        6. SCREEN: GAME (#screen-game)
+        ========================================
+        */
+        #screen-game {
+            flex-direction: row;
+            height: 100%;
+        }
+
+        /* 6.1 Game: Left Panel (Players & Chat) */
+        .game-sidebar {
+            width: 300px;
+            background-color: #181818;
+            border-right: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .game-header {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .game-header h3 {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+        
+        .game-header .timer {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-top: 0.5rem;
+        }
+
+        .player-list {
+            padding: 1rem;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        
+        .player-list h4 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 1rem;
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .player-item .status-icon {
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+        
+        .player-item .player-info {
+            flex-grow: 1;
+        }
+        
+        .player-item .player-name {
+            font-weight: 600;
+        }
+        
+        .player-item .player-score {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .player-item .player-points {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .chat-box {
+            border-top: 2px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+        
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .chat-messages .message {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .chat-messages .message strong {
+            color: var(--primary-color);
+        }
+        
+        .chat-messages .message.correct {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .chat-messages .message.system {
+            color: #888;
+            font-style: italic;
+        }
+        
+        #guess-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        #guess-input {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 14px;
+            max-width: none;
+        }
+        
+        #guess-submit {
+            padding: 10px;
+            font-size: 14px;
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        #guess-submit:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* 6.2 Game: Main Area (Canvas & Actions) */
+        .game-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* 6.3 Game: Top Bar (Song info / Tools) */
+        .game-top-bar {
+            height: 80px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background-color: #181818;
+        }
+
+        /* View for Guessers */
+        #game-view-guesser .prompt-bar {
+            text-align: center;
+        }
+        
+        #game-view-guesser .prompt-bar h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        #game-view-guesser .masked-lyrics {
+            font-family: monospace;
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            color: var(--primary-color);
+            margin-top: 0.25rem;
+        }
+
+        /* View for Drawer */
+        #game-view-drawer .prompt-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-view-drawer .prompt-bar h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #aaa;
+        }
+
+        #game-view-drawer .your-song {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Song Choice Modal */
+        #song-choice-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        #song-choice-modal.hidden {
+            display: none;
+        }
+        
+        #song-choice-modal h2 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .song-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .song-option {
+            background-color: var(--surface-color);
+            padding: 1.5rem 2.5rem;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 400px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+        
+        .song-option:hover {
+            transform: scale(1.05);
+            background-color: #2a2a2a;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+
+        /* 6.4 Game: Canvas Area */
+        .canvas-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--background-color);
+            padding: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #whiteboard {
+            background-color: white; /* Canvas MUST be white to draw */
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            cursor: crosshair;
+        }
+
+        /* 6.5 Game: Tool Bar (Bottom) */
+        .game-tool-bar {
+            height: 80px;
+            border-top: 2px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            gap: 1.5rem;
+            background-color: #181818;
+        }
+        
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .tool-group label {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid var(--border-color);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .color-swatch:hover, .color-swatch.active {
+            transform: scale(1.2);
+            border-color: var(--secondary-color);
+        }
+
+        #brush-size {
+            cursor: pointer;
+        }
+
+        .tool-button {
+            padding: 10px 16px;
+            font-size: 14px;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .tool-button:hover {
+            background-color: #444;
+        }
+
+        /* ========================================
+        7. RESPONSIVENESS
+        ========================================
+        */
+        @media (max-width: 1024px) {
+            .container {
+                width: 100%;
+                height: 100vh;
+                max-height: none;
+                border-radius: 0;
+            }
+
+            #screen-game {
+                flex-direction: column;
+            }
+
+            .game-sidebar {
+                width: 100%;
+                height: 250px;
+                flex-direction: row;
+                border-right: none;
+                border-bottom: 2px solid var(--border-color);
+            }
+            
+            .game-header {
+                border-bottom: none;
+                border-right: 2px solid var(--border-color);
+                width: 150px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            
+            .player-list {
+                flex-grow: 1;
+                border-right: 2px solid var(--border-color);
+            }
+            
+            .chat-box {
+                border-top: none;
+                width: 300px;
+                height: 100%;
+            }
+
+            .game-main {
+                flex-grow: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            h2 { font-size: 1.8rem; }
+            
+            #screen-home .logo { font-size: 4rem; }
+            
+            #screen-home .join-room-form {
+                flex-direction: column;
+                width: 100%;
+                padding: 0 1rem;
+            }
+            
+            #screen-home .join-room-form input {
+                max-width: none;
+            }
+
+            #screen-lobby .player-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            #screen-lobby .lobby-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            #screen-lobby .lobby-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .song-option {
+                min-width: 300px;
+                font-size: 1.2rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <section id="screen-home" class="screen active">
+            <div class="logo">🎵</div>
+            <h1>Padam Paathu Paatu</h1>
+            <p>Draw the song, let your friends guess!</p>
+            <div class="home-actions">
+                <button id="create-room-btn" class="btn btn-primary">
+                    Create New Room
+                </button>
+                <div class="join-room-form">
+                    <input type="text" id="room-code-input" placeholder="Enter Room Code" />
+                    <button id="join-room-btn" class="btn btn-secondary">
+                        Join Room
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-lobby" class="screen">
+            <div class="lobby-header">
+                <h2>Lobby - Waiting for Players...</h2>
+                <div class="room-code-display">
+                    <label>ROOM CODE</label>
+                    <span id="lobby-room-code">WAIT...</span>
+                </div>
+            </div>
+
+            <div class="player-grid">
+                <div id="player-slot-1" class="player-slot">
+                    <span class="waiting-text">Waiting for player...</span>
+                </div>
+                <div id="player-slot-2" class="player-slot">
+                    <span class="waiting-text">Waiting for player...</span>
+                </div>
+                <div id="player-slot-3" class="player-slot">
+                    <span class="waiting-text">Waiting for player...</span>
+                </div>
+                <div id="player-slot-4" class="player-slot">
+                    <span class="waiting-text">Waiting for player...</span>
+                </div>
+            </div>
+
+            <div class="lobby-footer">
+                <button id="leave-lobby-btn" class="btn btn-secondary">Leave Lobby</button>
+                <button id="start-game-btn" class="btn btn-primary" disabled>
+                    Waiting for 4 players...
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-game" class="screen">
+            
+            <div id="song-choice-modal" class="hidden">
+                <h2>Your turn! Choose a song to draw:</h2>
+                <div class="song-options">
+                    <div class="song-option" data-song="Munbe Vaa En Anbe Vaa">
+                        Munbe Vaa En Anbe Vaa...
+                    </div>
+                    <div class="song-option" data-song="Kannum Kannum Kollaiyadithaal">
+                        Kannum Kannum Kollaiyadithaal...
+                    </div>
+                    <div class="song-option" data-song="Venmathi Venmathiye Nillu">
+                        Venmathi Venmathiye Nillu...
+                    </div>
+                </div>
+            </div>
+
+            <aside class="game-sidebar">
+                <div class="game-header">
+                    <h3>ROUND 1/10</h3>
+                    <div id="game-timer" class="timer">3:00</div>
+                </div>
+
+                <div class="player-list">
+                    <h4>Players</h4>
+                    </div>
+
+                <div class="chat-box">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message system">Game started. Good luck!</div>
+                    </div>
+                    <form id="guess-form">
+                        <input
+                            type="text"
+                            id="guess-input"
+                            placeholder="Type your guess..."
+                            autocomplete="off"
+                        />
+                        <button id="guess-submit" class="btn">Send</button>
+                    </form>
+                </div>
+            </aside>
+
+            <main class="game-main">
+                
+                <div class="game-top-bar">
+                    
+                    <div id="game-view-guesser">
+                        <div class="prompt-bar">
+                            <h3>Player1 is drawing...</h3>
+                            <div class="masked-lyrics" id="masked-lyrics">
+                                __ __ __ __ __ __ __ __ __
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="game-view-drawer" class="hidden">
+                         <div class="prompt-bar">
+                            <h3>You are drawing:</h3>
+                            <div class="your-song" id="your-song">
+                                ---
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="canvas-area">
+                    <canvas id="whiteboard" width="800" height="450"></canvas>
+                </div>
+
+                <div class="game-tool-bar" id="game-tool-bar">
+                    <div class="tool-group">
+                        <label>Color:</label>
+                        <div class="color-swatch active" style="background-color: #000000" data-color="#000000"></div>
+                        <div class="color-swatch" style="background-color: #e74c3c" data-color="#e74c3c"></div>
+                        <div class="color-swatch" style="background-color: #3498db" data-color="#3498db"></div>
+                        <div class="color-swatch" style="background-color: #2ecc71" data-color="#2ecc71"></div>
+                        <div class="color-swatch" style="background-color: #f1c40f" data-color="#f1c40f"></div>
+                        <div class="color-swatch" style="background-color: #ffffff" data-color="#ffffff"></div>
+                    </div>
+                    <div class="tool-group">
+                        <label for="brush-size">Size:</label>
+                        <input type="range" id="brush-size" min="2" max="20" value="5" />
+                    </div>
+                    <div class="tool-group">
+                        <button id="clear-canvas-btn" class="tool-button">Clear</button>
+                    </div>
+                </div>
+
+            </main>
+        </section>
+
+    </div>
+
+<script>
+    /* ========================================
+    1. SCRIPT INITIALIZATION
+    ========================================
+    */
+    document.addEventListener("DOMContentLoaded", () => {
+        
+        // --- STATE VARIABLES ---
+        let currentScreen = "home";
+        let myRole = "guesser";
+        let myPlayerInfo = null;
+        let currentRoomCode = null;
+        let isDrawing = false;
+        let drawCtx;
+        let lastX = 0;
+        let lastY = 0;
+        let drawColor = "#000000";
+        let drawSize = 5;
+        let gameTimerInterval = null;
+        
+        // **** THIS IS THE ONLY LINE YOU MUST EDIT LATER ****
+        // **** PASTE YOUR RENDER.COM URL HERE ****
+        const backendUrl = "YOUR_SERVER_URL_HERE"; 
+        let socket;
+
+        // --- SCREEN ELEMENTS ---
+        const screens = {
+            home: document.getElementById("screen-home"),
+            lobby: document.getElementById("screen-lobby"),
+            game: document.getElementById("screen-game"),
+        };
+        const createRoomBtn = document.getElementById("create-room-btn");
+        const joinRoomBtn = document.getElementById("join-room-btn");
+        const roomCodeInput = document.getElementById("room-code-input");
+        const lobbyRoomCode = document.getElementById("lobby-room-code");
+        const playerSlots = [
+            document.getElementById("player-slot-1"),
+            document.getElementById("player-slot-2"),
+            document.getElementById("player-slot-3"),
+            document.getElementById("player-slot-4"),
+        ];
+        const startGameBtn = document.getElementById("start-game-btn");
+        const leaveLobbyBtn = document.getElementById("leave-lobby-btn");
+        const gamePlayerList = document.querySelector(".player-list");
+        const chatMessages = document.getElementById("chat-messages");
+        const guessForm = document.getElementById("guess-form");
+        const guessInput = document.getElementById("guess-input");
+        const gameTimerDisplay = document.getElementById("game-timer");
+        const guesserView = document.getElementById("game-view-guesser");
+        const drawerView = document.getElementById("game-view-drawer");
+        const yourSongText = document.getElementById("your-song");
+        const maskedLyricsText = document.getElementById("masked-lyrics");
+        const songChoiceModal = document.getElementById("song-choice-modal");
+        const songOptions = document.querySelector(".song-options");
+        const canvas = document.getElementById("whiteboard");
+        const toolBar = document.getElementById("game-tool-bar");
+        const colorSwatches = document.querySelectorAll(".color-swatch");
+        const brushSizeInput = document.getElementById("brush-size");
+        const clearCanvasBtn = document.getElementById("clear-canvas-btn");
+
+        /* ========================================
+        2. CORE FUNCTIONS
+        ========================================
+        */
+        function initializeSocket() {
+            if (backendUrl === "YOUR_SERVER_URL_HERE") {
+                alert("CRITICAL ERROR: backendUrl is not set in game.html. Follow deployment guide.");
+                return;
+            }
+            socket = io(backendUrl);
+            setupSocketListeners();
+        }
+
+        function showScreen(screenName) {
+            Object.values(screens).forEach((screen) => screen.classList.remove("active"));
+            screens[screenName].classList.add("active");
+            currentScreen = screenName;
+        }
+
+        function updateLobbyUI(players) {
+            playerSlots.forEach((slot, index) => {
+                const player = players[index];
+                if (player) {
+                    slot.classList.add("filled");
+                    slot.innerHTML = `
+                        <div class="player-avatar">${player.isHost ? '👑' : '😀'}</div>
+                        <div class="player-name">${player.name} ${player.id === socket.id ? '(You)' : ''}</div>
+                        ${player.isHost ? '<div class="host-badge">HOST</div>' : ""}
+                    `;
+                } else {
+                    slot.classList.remove("filled");
+                    slot.innerHTML = `<span class="waiting-text">Waiting for player...</span>`;
+                }
+            });
+
+            const amIHost = players.find(p => p.id === socket.id && p.isHost);
+            if (amIHost) {
+                startGameBtn.style.display = 'block';
+                if (players.length === 4) {
+                    startGameBtn.disabled = false;
+                    startGameBtn.textContent = "Start Game";
+                } else {
+                    startGameBtn.disabled = true;
+                    startGameBtn.textContent = `Waiting for ${4 - players.length} more...`;
+                }
+            } else {
+                startGameBtn.style.display = 'none';
+            }
+        }
+        
+        function resetGame() {
+            if(socket) socket.disconnect();
+            myPlayerInfo = null;
+            currentRoomCode = null;
+            showScreen('home');
+            roomCodeInput.value = "";
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            initializeSocket();
+        }
+
+        function addChatMessage(user, message, type = "normal") {
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("message");
+            if(type === "system") {
+                msgDiv.classList.add("system");
+                msgDiv.textContent = message;
+            } else if (type === "correct") {
+                msgDiv.classList.add("correct");
+                msgDiv.innerHTML = `<strong>${user}</strong> guessed the song!`;
+            } else {
+                msgDiv.innerHTML = `<strong>${user}:</strong> ${message}`;
+            }
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function startTimer(durationInSeconds) {
+            let timerSeconds = durationInSeconds;
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            
+            const update = () => {
+                let minutes = Math.floor(timerSeconds / 60);
+                let seconds = timerSeconds % 60;
+                gameTimerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                if (timerSeconds <= 0) {
+                    clearInterval(gameTimerInterval);
+                    gameTimerDisplay.textContent = "0:00";
+                    addChatMessage(null, "Time's up! Round over.", "system");
+                }
+                timerSeconds--;
+            };
+            update();
+            gameTimerInterval = setInterval(update, 1000);
+        }
+
+        /* ========================================
+        3. CANVAS (WHITEBOARD) FUNCTIONS
+        ========================================
+        */
+        function setupCanvas() {
+            drawCtx = canvas.getContext("2d");
+            const area = canvas.parentElement;
+            const areaRect = area.getBoundingClientRect();
+            const ratio = 450 / 800;
+            let newWidth = areaRect.width - 32;
+            let newHeight = newWidth * ratio;
+            if (newHeight > areaRect.height - 32) {
+                newHeight = areaRect.height - 32;
+                newWidth = newHeight / ratio;
+            }
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            drawCtx.lineCap = "round";
+            drawCtx.lineJoin = "round";
+            drawCtx.strokeStyle = drawColor;
+            drawCtx.lineWidth = drawSize;
+            canvas.addEventListener("mousedown", startDrawing);
+            canvas.addEventListener("mousemove", draw);
+            canvas.addEventListener("mouseup", stopDrawing);
+            canvas.addEventListener("mouseout", stopDrawing);
+        }
+
+        function startDrawing(e) {
+            if (myRole !== 'drawer') return;
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const newX = e.offsetX;
+            const newY = e.offsetY;
+            
+            // Draw locally
+            remoteDrawLine(lastX, lastY, newX, newY, drawColor, drawSize);
+
+            // Send to server
+            socket.emit("drawing-data", {
+                roomCode: currentRoomCode,
+                x1: lastX, y1: lastY, x2: newX, y2: newY,
+                color: drawColor, size: drawSize
+            });
+            
+            [lastX, lastY] = [newX, newY];
+        }
+        
+        function stopDrawing() { isDrawing = false; }
+        
+        function remoteDrawLine(x1, y1, x2, y2, color, size) {
+            const oldColor = drawCtx.strokeStyle;
+            const oldSize = drawCtx.lineWidth;
+            drawCtx.strokeStyle = color;
+            drawCtx.lineWidth = size;
+            drawCtx.beginPath();
+            drawCtx.moveTo(x1, y1);
+            drawCtx.lineTo(x2, y2);
+            drawCtx.stroke();
+            drawCtx.strokeStyle = oldColor;
+            drawCtx.lineWidth = oldSize;
+        }
+
+        function remoteClearCanvas() {
+            drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        /* ========================================
+        4. SOCKET.IO EVENT EMITTERS (Sending to Server)
+        ========================================
+        */
+        createRoomBtn.addEventListener("click", () => {
+            socket.emit("create-room");
+        });
+        
+        joinRoomBtn.addEventListener("click", () => {
+            const code = roomCodeInput.value.trim();
+            if (code) {
+                socket.emit("join-room", code);
+            }
+        });
+
+        leaveLobbyBtn.addEventListener("click", () => {
+            resetGame();
+        });
+        
+        startGameBtn.addEventListener("click", () => {
+            socket.emit("start-game", currentRoomCode);
+        });
+
+        songOptions.addEventListener("click", (e) => {
+            if (e.target.classList.contains("song-option")) {
+                const song = e.target.dataset.song;
+                yourSongText.textContent = song;
+                songChoiceModal.classList.add("hidden");
+                addChatMessage(null, `You are drawing: ${song}`, "system");
+                startTimer(180);
+                socket.emit("song-chosen", { roomCode: currentRoomCode, song: song });
+            }
+        });
+
+        guessForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const guess = guessInput.value.trim();
+            if (guess && myRole === 'guesser') {
+                socket.emit("submit-guess", {
+                    roomCode: currentRoomCode,
+                    guess: guess,
+                    player: myPlayerInfo
+                });
+                guessInput.value = "";
+            }
+        });
+
+        clearCanvasBtn.addEventListener("click", () => {
+            remoteClearCanvas();
+            socket.emit("clear-canvas", currentRoomCode);
+        });
+
+        /* ========================================
+        5. SOCKET.IO EVENT LISTENERS (Receiving from Server)
+        ========================================
+        */
+        function setupSocketListeners() {
+            socket.on("connect", () => {
+                console.log("Connected to server!", socket.id);
+                showScreen("home");
+            });
+
+            socket.on("room-created", (data) => {
+                myPlayerInfo = data.player;
+                currentRoomCode = data.roomCode;
+                lobbyRoomCode.textContent = currentRoomCode;
+                updateLobbyUI([myPlayerInfo]);
+                showScreen("lobby");
+            });
+            
+            socket.on("joined-room", (data) => {
+                myPlayerInfo = data.player;
+                currentRoomCode = data.roomCode;
+                lobbyRoomCode.textContent = currentRoomCode;
+                showScreen("lobby");
+                // The 'update-lobby' event will handle the UI
+            });
+
+            socket.on("update-lobby", (players) => {
+                updateLobbyUI(players);
+            });
+            
+            socket.on("player-left", (players) => {
+                addChatMessage(null, "A player left the room.", "system");
+                updateLobbyUI(players);
+            });
+
+            socket.on("game-started", () => {
+                showScreen("game");
+                setupCanvas();
+                chatMessages.innerHTML = '';
+                addChatMessage(null, "Game started. Good luck!", "system");
+
+                // Assign roles
+                if (myPlayerInfo.isHost) {
+                    myRole = "drawer";
+                    songChoiceModal.classList.remove("hidden");
+                    drawerView.classList.remove("hidden");
+                    guesserView.classList.add("hidden");
+                    toolBar.style.display = 'flex';
+                    guessForm.style.display = 'none';
+                } else {
+                    myRole = "guesser";
+                    songChoiceModal.classList.add("hidden");
+                    drawerView.classList.add("hidden");
+                    guesserView.classList.remove("hidden");
+                    toolBar.style.display = 'none';
+                    guessForm.style.display = 'flex';
+                }
+            });
+
+            socket.on("song-chosen-update", (maskedSong) => {
+                if (myRole === "guesser") {
+                    maskedLyricsText.textContent = maskedSong;
+                    addChatMessage(null, "The drawer has chosen a song. Start guessing!", "system");
+                    startTimer(180);
+                }
+            });
+            
+            socket.on("drawing-update", (data) => {
+                remoteDrawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.size);
+            });
+            
+            socket.on("canvas-cleared", () => {
+                remoteClearCanvas();
+            });
+
+            socket.on("new-message", (message) => {
+                addChatMessage(message.user, message.text, message.type);
+            });
+
+            socket.on("error-message", (message) => {
+                alert(message);
+            });
+            
+            socket.on("disconnect", () => {
+                alert("You have been disconnected from the server.");
+                resetGame();
+            });
+        }
+        
+        /* ========================================
+        6. NON-SOCKET EVENT LISTENERS & INITIALIZE
+        ========================================
+        */
+        colorSwatches.forEach(swatch => {
+            swatch.addEventListener("click", () => {
+                colorSwatches.forEach(s => s.classList.remove("active"));
+                swatch.classList.add("active");
+                drawColor = swatch.dataset.color;
+                drawCtx.strokeStyle = drawColor;
+                drawCtx.lineWidth = (drawColor === '#ffffff') ? 25 : drawSize;
+            });
+        });
+
+        brushSizeInput.addEventListener("change", (e) => {
+            drawSize = e.target.value;
+            if (drawColor !== '#ffffff') {
+                drawCtx.lineWidth = drawSize;
+            }
+        });
+        
+        window.addEventListener('resize', setupCanvas);
+
+        // --- INITIALIZE ---
+        // We start by connecting to the socket
+        initializeSocket();
+    });
+</script>
+</body>
+</html>
